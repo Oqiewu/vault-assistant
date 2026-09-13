@@ -1,4 +1,5 @@
 import io
+import re
 import sys
 from pathlib import Path
 from typing import cast
@@ -28,6 +29,14 @@ def parse_note(file_path: Path) -> tuple[dict, str]:
     except yaml.YAMLError:
         metadata = {}
     return metadata, body.strip()
+
+
+def clean_for_embedding(text: str) -> str:
+    text = re.sub(r"\[\[[^\]|]*\|([^\]]+)\]\]", r"\1", text)  # [[путь|Название]] -> Название
+    text = re.sub(r"\[\[([^\]]+)\]\]", r"\1", text)  # [[Название]] -> Название
+    text = re.sub(r"[⬜✅🟡🔁🚀📊🧭]", "", text)
+    text = text.replace("|", " ").replace("#", " ")
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def chunk_text(text: str, chunk_size: int = 700, overlap: int = 100) -> list[str]:

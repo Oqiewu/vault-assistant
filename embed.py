@@ -7,7 +7,7 @@ from typing import cast
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from chunk_vault import chunk_text, find_markdown_files, parse_note
+from chunk_vault import chunk_text, clean_for_embedding, find_markdown_files, parse_note
 
 cast(io.TextIOWrapper, sys.stdout).reconfigure(encoding="utf-8")
 
@@ -55,19 +55,20 @@ def search(
     return scores[:top_n]
 
 
+def build_index(vault_path: str) -> tuple[list[Chunk], SentenceTransformer, np.ndarray]:
+    chunks = build_chunks(vault_path)
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    texts = [clean_for_embedding(c.text) for c in chunks]
+    embeddings = model.encode(texts, show_progress_bar=True)
+    return chunks, model, embeddings
+
+
 if __name__ == "__main__":
     vault_path = r"C:\Users\Игорь\Documents\Personal"
 
-    print("Собираем чанки...")
-    chunks = build_chunks(vault_path)
+    print("Строим индекс (обход vault, chunking, embeddings)...")
+    chunks, model, embeddings = build_index(vault_path)
     print(f"Всего чанков: {len(chunks)}")
-
-    print("Загружаем модель embeddings (all-MiniLM-L6-v2)...")
-    model = SentenceTransformer("all-MiniLM-L6-v2")
-
-    print("Считаем embeddings для всех чанков...")
-    texts = [c.text for c in chunks]
-    embeddings = model.encode(texts, show_progress_bar=True)
 
     query = "на чём я остановился в изучении Go?"
     print(f"\nЗапрос: {query}")
